@@ -1,8 +1,3 @@
-# Lession 4.7: Introducing Templates
-
-# We introduce templates to build complicated strings using the Jinja2 library.
-
-# https://www.udacity.com/course/viewer#!/c-nd000/l-4186408748/m-686598825
 
 import os
 
@@ -21,7 +16,7 @@ template_dir = os.path.dirname(__file__)
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                 autoescape = True)
 # Google API 
-google_url = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false&latlng="
+google_url = "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyDhG7IcKerUStbsVkV6tEqqjMNMpLcR0Gc&sensor=false&latlng="
 # Create global variables for database and current user
 comments_database = 'comments'
 current_user = "Anonymous"
@@ -30,24 +25,34 @@ def get_city_country(latlng):
     """ get city and country from latitude and longitude"""
     url = google_url + latlng
     print url
+    error_code = 1;
     try:
         content = urllib2.urlopen(url).read()
     except (urllib2.URLError, httplib.HTTPException):
+        error_code = 2
         return None, None
     city = None
     country = None
     if content:
         data = json.loads(content)
         if data:
-            if len(data["results"]) > 0 and data["status"] == "OK":
+            error_code = -1
+            if data["status"] == "OK":
+                error_code = -2
                 d = data["results"][0]["address_components"]
                 if d:
+                    error_code = -3
                     for tup in d:
                         if "locality" in tup["types"]:
+                            error_code = 0
                             city = tup["long_name"]
                         elif "country" in tup["types"]:
-                            country = tup["short_name"]             
-    return city, country
+                            error_code = 0
+                            country = tup["short_name"]
+            else:
+                city = str(data)
+                error_code = -4             
+    return city, country, error_code
 
 
     return None, None
@@ -94,13 +99,14 @@ class MainPage(Handler):
         number_of_comments = 10
         comments_list = comments_query.fetch(number_of_comments)
         invalid_comment = self.request.get("invalid_comment")
+        error_code = self.request.get("error")
         global current_user
         if current_user == "Anonymous":
             user_status = "Login"
         else:
             user_status = "Logout"
 
-        self.render("my_first.html", user_status = user_status, user_name = current_user, comments_list = comments_list, invalid_comment = invalid_comment)
+        self.render("my_first.html", user_status = user_status, user_name = current_user, comments_list = comments_list, invalid_comment = invalid_comment, error_code = error_code)
 
 class LoginPageLoader(Handler):
     """ Class for /login """
@@ -126,16 +132,26 @@ class PostPageLoader(Handler):
         comments_data.user = current_user
         comments_data.content = self.request.get("content")
         locate = self.request.get("location_tag")
+        error_code = 0;
         if locate != "":
-            city, country = get_city_country(locate)
+            city, country, error_code = get_city_country(locate)
             comments_data.city = city
             comments_data.country = country
-
         if comments_data.content and comments_data.content.strip():
             comments_data.put()
-            self.redirect("/#comments")
+            if error_code != 0:
+                url = "/?error="+str(error_code)+"&latlng="+locate
+            else:
+                url= "/"
+            url = url+"#comments"
+            self.redirect(url)
         else:
-            self.redirect("/?invalid_comment=true#comments")
+            if error_code != 0:
+                url = "/?error="+str(error_code)+"&"
+            else:
+                url = "/?"
+            url = url+"invalid_comment=true#comments"
+            self.redirect(url)
 
 class LogOutPageLoader(Handler):
     """ Class for /logout """
