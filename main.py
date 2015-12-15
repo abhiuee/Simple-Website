@@ -12,6 +12,9 @@ import urllib2
 from google.appengine.ext import ndb
 import httplib
 import json
+from google.appengine.api import urlfetch
+
+urlfetch.set_default_fetch_deadline(600)
 
 # Set up jinja environment
 template_dir = os.path.dirname(__file__)
