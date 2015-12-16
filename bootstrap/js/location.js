@@ -1,13 +1,25 @@
+var latitude = null
+var longitude = null
+
+if (navigator.geolocation) {
+	console.log("Find location")
+	navigator.geolocation.getCurrentPosition(showPosition, geoError)
+}
+
 function clicked(cb) {
 	//If save location is checked then use this
 	var x = cb.checked;
+	var b = document.getElementById("hidden_location");
 	if (x ) {
 		console.log(x)
 		console.log("Checked")
-		if (navigator.geolocation) {
-			console.log("Navigator location")
-			navigator.geolocation.getCurrentPosition(showPosition, geoError);
-		} 
+		if (latitude & longitude) {
+			console.log("Save location")
+		    console.log(latitude);
+		    b.value = latitude+","+longitude;
+		}
+	} else {
+		b.value = ""
 	}
 }
 
@@ -22,9 +34,6 @@ var geoError = function(error) {
 
 function showPosition(position) {
 	//Get latitude and longiture and fill in the hidden input form
-	var latitude = position.coords.latitude;
-    var longitude = position.coords.longitude;
-    var b = document.getElementById("hidden_location");
-    console.log(latitude)
-    b.value = latitude+","+longitude;
+	latitude = position.coords.latitude;
+    longitude = position.coords.longitude; 
 }
